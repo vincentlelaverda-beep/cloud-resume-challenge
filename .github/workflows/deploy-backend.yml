@@ -1,0 +1,81 @@
+# ── Backend CI/CD ─────────────────────────────────────────────────────────────
+#
+# Triggered whenever Python source or dependencies change on master.
+#
+# Jobs:
+#   1. test   — run the full pytest suite (must pass before deploy)
+#   2. deploy — zip the api/ folder and push it to Azure Functions
+#
+# Secrets required (Settings → Secrets → Actions):
+#   AZURE_CREDENTIALS  — Service Principal JSON (az ad sp create-for-rbac --sdk-auth)
+#
+name: Deploy Backend
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - "api/**"          # only run when backend files change
+
+jobs:
+  # ── 1. Test ────────────────────────────────────────────────────────────────
+  test:
+    name: Run pytest
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: api/requirements-dev.txt
+
+      - name: Install dependencies
+        run: pip install -r api/requirements-dev.txt
+
+      - name: Run tests with coverage
+        run: |
+          cd api
+          python -m pytest tests/ -v --cov=function_app --cov-report=term-missing
+
+  # ── 2. Deploy ──────────────────────────────────────────────────────────────
+  deploy:
+    name: Zip deploy to Azure Functions
+    runs-on: ubuntu-latest
+    needs: test          # only runs if tests pass
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Zip the function app
+        run: |
+          cd api
+          zip -r ../api.zip . -x "tests/*" -x "__pycache__/*" -x "*.pyc" -x "requirements-dev.txt" -x ".pytest_cache/*" -x ".coverage"
+          echo "api.zip size: $(du -sh ../api.zip | cut -f1)"
+
+      - name: Deploy to Azure Function App
+        run: |
+          az functionapp deployment source config-zip \
+            --resource-group rg-cloud-cv \
+            --name func-stvincentcv \
+            --src api.zip \
+            --build-remote true
+
+      - name: Verify deployment
+        run: |
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://func-stvincentcv.azurewebsites.net/api/visitor-counter")
+          echo "Function HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Function returned $STATUS after deploy"
+            exit 1
+          fi
