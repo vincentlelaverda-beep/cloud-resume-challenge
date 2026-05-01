@@ -347,13 +347,19 @@
         <span class="blue">Azure Storage</span>
           <span class="dim">Static Website ($web container)</span><br>
         <br>
-        <span class="dim">Infrastructure managed by </span>
+        <span class="dim">JS counter ──► </span>
+        <span class="blue">Azure Functions</span>
+          <span class="dim">(Python · HTTP trigger)</span>
+          ──► <span class="blue">CosmosDB</span>
+          <span class="dim">(Table API · Serverless)</span><br>
+        <br>
+        <span class="dim">Infrastructure: </span>
         <span class="org">Terraform</span>
-        <span class="dim"> · Source code on </span>
+        <span class="dim"> · Source: </span>
         <span class="org">GitHub</span>
-        <span class="dim"> · Deployed via </span>
+        <span class="dim"> · CI/CD: </span>
         <span class="org">GitHub Actions</span>
-        <span class="dim"> (coming soon)</span>
+        <span class="dim"> (tests → deploy on every push)</span>
       </div>
     </section>
 
@@ -379,7 +385,7 @@
         <div class="stack-card">
           <div class="stack-icon">🐙</div>
           <div class="stack-name">GitHub Actions</div>
-          <div class="stack-role">CI/CD (coming soon)</div>
+          <div class="stack-role">CI/CD · auto-deploy on push</div>
         </div>
         <div class="stack-card">
           <div class="stack-icon">🐍</div>
@@ -436,38 +442,74 @@
         </div>
 
         <div class="step">
-          <div class="step-num pending">7</div>
+          <div class="step-num done">✓</div>
           <div class="step-body">
             <h3>7 · Visitor Counter (JavaScript)</h3>
-            <p>A JavaScript counter that calls an Azure Function API to display how many people visited this site.</p>
-            <div class="tags"><span class="tag">JavaScript</span><span class="tag">Fetch API</span></div>
+            <p><code>counter.js</code> fetches the current count from the Azure Function on every page load, updating every element with class <code>.visitor-count</code>. Fails silently — a broken counter never breaks the CV page.</p>
+            <div class="tags"><span class="tag">JavaScript</span><span class="tag">Fetch API</span><span class="tag">Async/Await</span></div>
           </div>
         </div>
 
         <div class="step">
-          <div class="step-num pending">8</div>
+          <div class="step-num done">✓</div>
           <div class="step-body">
             <h3>8 · Database</h3>
-            <p>Azure CosmosDB (free tier) stores the visitor count using the Table API in serverless capacity mode.</p>
-            <div class="tags"><span class="tag">CosmosDB</span><span class="tag">Serverless</span></div>
+            <p>Azure CosmosDB free tier with the Table API in serverless capacity mode — zero cost at low traffic, no minimum throughput charge. The counter entity uses partition key <code>main</code> / row key <code>counter</code>.</p>
+            <div class="tags"><span class="tag">CosmosDB</span><span class="tag">Table API</span><span class="tag">Serverless</span></div>
           </div>
         </div>
 
         <div class="step">
-          <div class="step-num pending">9</div>
+          <div class="step-num done">✓</div>
           <div class="step-body">
             <h3>9 · API &amp; 10 · Python</h3>
-            <p>Azure Function with HTTP trigger, written in Python, reads and updates the CosmosDB counter.</p>
-            <div class="tags"><span class="tag">Azure Functions</span><span class="tag">Python</span></div>
+            <p>Azure Function v2 programming model, HTTP trigger, anonymous auth. On GET it fetches the entity, increments the count, persists it, and returns <code>{"count": N}</code> with a CORS header. First-ever request creates the entity at count 1.</p>
+            <div class="tags"><span class="tag">Azure Functions v2</span><span class="tag">Python 3.11</span><span class="tag">Consumption Plan</span></div>
           </div>
         </div>
 
         <div class="step">
-          <div class="step-num pending">11</div>
+          <div class="step-num done">✓</div>
           <div class="step-body">
-            <h3>11–15 · Tests, IaC &amp; CI/CD</h3>
-            <p>Python tests for the Azure Function. Full infrastructure as code with Terraform. GitHub Actions pipelines for automatic deployment on push.</p>
-            <div class="tags"><span class="tag">pytest</span><span class="tag">GitHub Actions</span><span class="tag">Terraform</span></div>
+            <h3>11 · Tests</h3>
+            <p>pytest suite with <code>unittest.mock</code> — no real Azure connection needed. Three tests cover: existing counter increment, first-visit creation, and CosmosDB failure → 500 fallback. Coverage: <strong>100%</strong>.</p>
+            <div class="tags"><span class="tag">pytest</span><span class="tag">unittest.mock</span><span class="tag">100% coverage</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>12 · Infrastructure as Code</h3>
+            <p>Every Azure and Cloudflare resource is defined in Terraform — resource group, storage account, CosmosDB, Function App, Cloudflare DNS records, Worker script and routes, zone settings. No manual portal clicks.</p>
+            <div class="tags"><span class="tag">Terraform</span><span class="tag">azurerm</span><span class="tag">cloudflare</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>13 · Source Control</h3>
+            <p>Full project on GitHub. Secrets (API tokens, Terraform state, CosmosDB keys) are gitignored. Only source files are committed — IaC, Python function, tests, HTML, and JS.</p>
+            <div class="tags"><span class="tag">GitHub</span><span class="tag">.gitignore</span><span class="tag">gh CLI</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>14 · CI/CD — Backend</h3>
+            <p>Push to <code>api/**</code> triggers the Deploy Backend pipeline: pytest must pass before any deploy runs. On success, the function is zipped and deployed to Azure via <code>az functionapp deployment source config-zip</code>. A post-deploy HTTP check verifies the function returns 200.</p>
+            <div class="tags"><span class="tag">GitHub Actions</span><span class="tag">pytest gate</span><span class="tag">zip deploy</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>15 · CI/CD — Frontend</h3>
+            <p>Push to any <code>.html</code> or <code>.js</code> file triggers the Deploy Frontend pipeline: files are uploaded to Azure Storage then Cloudflare's cache is purged so visitors see the new version immediately — no manual steps needed.</p>
+            <div class="tags"><span class="tag">GitHub Actions</span><span class="tag">Azure Storage</span><span class="tag">Cloudflare cache purge</span></div>
           </div>
         </div>
 
