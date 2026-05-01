@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vincent Le Laverda — Cloud Security Engineer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #00d4aa;
+      --accent2: #58a6ff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --danger: #f85149;
+      --sidebar-w: 220px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,170,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,170,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Layout ─── */
+    .layout {
+      display: flex;
+      min-height: 100vh;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ─── Sidebar — hidden by default on all screen sizes ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+    }
+    .sidebar.open { transform: translateX(0); }
+
+    .sidebar-brand {
+      padding: 16px 20px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .sidebar-brand-text { flex: 1; min-width: 0; padding-top: 2px; }
+    .sidebar-brand-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text);
+      line-height: 1.3;
+      margin-bottom: 4px;
+    }
+    .sidebar-brand-role {
+      font-size: 0.72rem;
+      color: var(--accent);
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 16px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 8px 10px 6px;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 500;
+      transition: background 0.15s, color 0.15s;
+    }
+    .nav-item:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+    .nav-item.active {
+      background: rgba(0,212,170,.1);
+      color: var(--accent);
+      border: 1px solid rgba(0,212,170,.2);
+    }
+    .nav-item .nav-icon { font-size: 1rem; flex-shrink: 0; }
+
+    .sidebar-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--border);
+      line-height: 1.6;
+    }
+    .sidebar-footer a { color: var(--accent); text-decoration: none; }
+    .visitor-box {
+      color: var(--muted);
+      margin-bottom: 10px;
+      font-size: 0.80rem;
+    }
+    .visitor-count { color: var(--accent); font-weight: 700; }
+
+    /* ─── Toggle button ─── */
+    /* Inside sidebar: part of the brand header */
+    .hamburger-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+      align-self: center;
+    }
+    .hamburger-sidebar span {
+      display: block;
+      width: 18px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+    }
+
+    /* Outside sidebar: fixed button shown when sidebar is closed */
+    .hamburger {
+      display: flex;
+      position: fixed;
+      top: 14px; left: 14px;
+      z-index: 200;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      flex-direction: column;
+      gap: 5px;
+      transition: opacity 0.2s;
+    }
+    .hamburger span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+    }
+    /* Hide the external button when sidebar is open */
+    .hamburger.hidden { opacity: 0; pointer-events: none; }
+
+    /* Overlay — mobile only (desktop: content shifts instead) */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      z-index: 99;
+    }
+
+    /* ─── Main content ─── */
+    .main {
+      margin-left: 0;
+      flex: 1;
+      min-width: 0;
+      transition: margin-left 0.25s ease;
+    }
+    /* Desktop: push content when sidebar is open */
+    @media (min-width: 769px) {
+      .main.shifted { margin-left: var(--sidebar-w); }
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+    }
+
+    /* ─── Header ─── */
+    header {
+      text-align: center;
+      padding: 50px 30px 40px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: var(--surface);
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 28px;
+    }
+    .cert-badge {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .cert-badge.blue   { color: var(--accent2); }
+    .cert-badge.orange { color: #f0883e; }
+
+    h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .title-tag {
+      display: inline-block;
+      background: rgba(0,212,170,.12);
+      border: 1px solid rgba(0,212,170,.3);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 4px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+    }
+
+    .contact-row {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .contact-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+    .contact-item a { color: var(--accent2); text-decoration: none; }
+    .contact-item a:hover { text-decoration: underline; }
+    .contact-item .icon { font-size: 1rem; }
+
+    .visa-tag {
+      display: inline-block;
+      background: rgba(248,81,73,.1);
+      border: 1px solid rgba(248,81,73,.3);
+      color: var(--danger);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      margin-left: 4px;
+    }
+
+    /* ─── Sections ─── */
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── Summary ─── */
+    .summary-text { color: var(--muted); font-size: 0.95rem; line-height: 1.75; }
+    .summary-text strong { color: var(--text); }
+
+    /* ─── Skills ─── */
+    .skills-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+    .skill-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .skill-card h3 { font-size: 0.78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent2); margin-bottom: 10px; }
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 3px 10px; font-size: 0.78rem; color: var(--muted); }
+
+    /* ─── Experience ─── */
+    .exp-item { margin-bottom: 32px; }
+    .exp-item:last-child { margin-bottom: 0; }
+    .exp-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+    .exp-company { font-size: 1.05rem; font-weight: 700; color: var(--text); }
+    .exp-role { display: inline-block; background: rgba(88,166,255,.1); border: 1px solid rgba(88,166,255,.2); color: var(--accent2); border-radius: 6px; padding: 2px 10px; font-size: 0.78rem; font-weight: 600; margin-left: 8px; }
+    .exp-date { font-size: 0.82rem; color: var(--muted); white-space: nowrap; }
+    .exp-subtitle { font-size: 0.83rem; color: var(--muted); font-style: italic; margin-bottom: 12px; }
+    .exp-bullets { list-style: none; padding: 0; }
+    .exp-bullets li { position: relative; padding-left: 18px; margin-bottom: 8px; font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+    .exp-bullets li::before { content: '▸'; position: absolute; left: 0; color: var(--accent); font-size: 0.75rem; top: 2px; }
+    .exp-bullets li strong { color: var(--text); }
+    .exp-divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+    /* ─── Education ─── */
+    .edu-grid { display: flex; flex-direction: column; gap: 14px; }
+    .edu-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .edu-degree { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+    .edu-school { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+    .edu-year { font-size: 0.82rem; color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+    /* ─── Certifications ─── */
+    .cert-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .cert-item { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+    .cert-category { font-size: 0.7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+    .cert-list { list-style: none; padding: 0; }
+    .cert-list li { font-size: 0.82rem; color: var(--muted); padding: 3px 0; border-bottom: 1px solid var(--border); }
+    .cert-list li:last-child { border-bottom: none; }
+
+    /* ─── Footer ─── */
+    footer { text-align: center; margin-top: 40px; font-size: 0.78rem; color: var(--border); }
+
+    /* ─── Responsive ─── */
+    @media (max-width: 768px) {
+      .overlay.open { display: block; }
+      .container { padding: 24px 16px 60px; padding-top: 64px; }
+      section { padding: 20px 16px; }
+      .exp-header { flex-direction: column; }
+    }
+
+    @media print {
+      .sidebar, .hamburger { display: none; }
+      .main { margin-left: 0; }
+      body { background: white; color: #111; }
+      body::before { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── Hamburger (mobile only) ── -->
+  <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="overlay" id="overlay"></div>
+
+  <div class="layout">
+
+    <!-- ── Sidebar ── -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <button class="hamburger-sidebar" id="hamburger-sidebar" aria-label="Close menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="sidebar-brand-text">
+          <div class="sidebar-brand-name">Vincent Le Laverda</div>
+          <div class="sidebar-brand-role">Cloud Security Engineer</div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-label">Pages</div>
+        <a href="index.html" class="nav-item active">
+          <span class="nav-icon">📄</span> My CV
+        </a>
+        <a href="how-i-was-built.html" class="nav-item">
+          <span class="nav-icon">🔧</span> How I Was Built
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="visitor-box">
+          👁 <span class="visitor-count">—</span> visitors
+        </div>
+        Built with <a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a> ⚡
+        <br>Cloud Resume Challenge
+      </div>
+    </aside>
+
+    <!-- ── Main ── -->
+    <main class="main">
+      <div class="container">
+
+        <header>
+          <div class="badge-row">
+            <span class="cert-badge">CCSP ISC²</span>
+            <span class="cert-badge blue">ISO 27001</span>
+            <span class="cert-badge blue">AZ-500</span>
+            <span class="cert-badge orange">GCP Security</span>
+            <span class="cert-badge">Netskope NCSA</span>
+            <span class="cert-badge orange">AWS AI Practitioner</span>
+          </div>
+          <h1>Vincent Le Laverda</h1>
+          <div class="title-tag">Cloud Security Engineer</div>
+          <div class="contact-row">
+            <span class="contact-item">
+              <span class="icon">📍</span>
+              France → Hong Kong (May 2026)
+              <span class="visa-tag">Work Visa Required</span>
+            </span>
+            <span class="contact-item">
+              <span class="icon">✉️</span>
+              <a href="mailto:vincentlelaverda@gmail.com">vincentlelaverda@gmail.com</a>
+            </span>
+            <span class="contact-item">
+              <span class="icon">📱</span>
+              +33 6 43 01 23 06
+            </span>
+            <span class="contact-item">
+              <span class="icon">🔗</span>
+              <a href="https://www.linkedin.com/in/vincent-lv-0321a010b" target="_blank" rel="noopener">LinkedIn</a>
+            </span>
+          </div>
+        </header>
+
+        <section>
+          <div class="section-title">Executive Summary</div>
+          <p class="summary-text">
+            <strong>Cloud Security Engineer</strong> with <strong>6+ years of experience</strong> specializing in
+            <strong>cybersecurity resilience</strong> and <strong>IT risk management</strong> for global financial and energy
+            leaders. Expert in designing and executing <strong>Cloud Disaster Recovery</strong> (Azure, AWS, GCP) and leading
+            large-scale projects across <strong>Europe</strong>, the <strong>US</strong>, and <strong>APAC</strong>. Proven
+            track record of improving security posture through better vulnerability management and secure DevOps (Shift-Left)
+            practices. <strong>CCSP certified</strong> for expertise in securing large-scale cloud platforms and architectures.
+          </p>
+        </section>
+
+        <section>
+          <div class="section-title">Key Skills</div>
+          <div class="skills-grid">
+            <div class="skill-card">
+              <h3>☁️ Cloud Security &amp; Resilience</h3>
+              <div class="tag-list">
+                <span class="tag">Azure DRP</span>
+                <span class="tag">AWS</span>
+                <span class="tag">GCP</span>
+                <span class="tag">Multi-Zone HA</span>
+                <span class="tag">Kubernetes Recovery</span>
+              </div>
+            </div>
+            <div class="skill-card">
+              <h3>🛡️ Risk &amp; Compliance</h3>
+              <div class="tag-list">
+                <span class="tag">ISO 27001</span>
+                <span class="tag">GDPR</span>
+                <span class="tag">EBIOS RM</span>
+                <span class="tag">MESARI</span>
+              </div>
+            </div>
+            <div class="skill-card">
+              <h3>🔧 Cybersecurity Toolset</h3>
+              <div class="tag-list">
+                <span class="tag">CrowdStrike</span>
+                <span class="tag">Tenable</span>
+                <span class="tag">Prisma Cloud</span>
+                <span class="tag">CSPM/CWP</span>
+                <span class="tag">Hackuity</span>
+                <span class="tag">Netskope</span>
+              </div>
+            </div>
+            <div class="skill-card">
+              <h3>🌐 Languages</h3>
+              <div class="tag-list">
+                <span class="tag">French (Native)</span>
+                <span class="tag">English (TOEFL 106)</span>
+                <span class="tag">Cantonese (Advanced Beginner)</span>
+                <span class="tag">Vietnamese (Intermediate)</span>
+                <span class="tag">Spanish (Intermediate)</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Professional Experience</div>
+
+          <div class="exp-item">
+            <div class="exp-header">
+              <div>
+                <span class="exp-company">ENGIE S&amp;EM</span>
+                <span class="exp-role">Cybersecurity Engineer — Freelance</span>
+              </div>
+              <span class="exp-date">2024 – Present</span>
+            </div>
+            <div class="exp-subtitle">Major global energy player, 30+ countries · Rank #159 Forbes 2025 Global 2000</div>
+            <ul class="exp-bullets">
+              <li><strong>Disaster Recovery Leadership:</strong> Spearheaded Azure DR initiatives across 7 global regions (incl. Singapore/US) for 50+ critical applications, ensuring 99.9% business continuity.</li>
+              <li><strong>Resilience Strategy:</strong> Defined enterprise-wide cloud resilience architecture for "Move-to-Cloud" projects, focusing on high availability and multi-zone failovers.</li>
+              <li><strong>Vulnerability Management:</strong> Improved remediation SLAs via CrowdStrike &amp; Prisma CSPM monitoring, reducing mean time to correct by 50%. Steered all servers OS EoL exit.</li>
+              <li><strong>Risk Management, AI &amp; SecDevOps:</strong> Conducted security risk analysis for new projects including AI; initiated a centralized secure Kubernetes image repository (Shift-Left).</li>
+            </ul>
+          </div>
+
+          <hr class="exp-divider" />
+
+          <div class="exp-item">
+            <div class="exp-header">
+              <div>
+                <span class="exp-company">DEVOTEAM CYBER TRUST</span>
+                <span class="exp-role">Cloud Security Consultant</span>
+              </div>
+              <span class="exp-date">2020 – 2024</span>
+            </div>
+            <div class="exp-subtitle">Leading European IT consultancy and security service provider</div>
+            <ul class="exp-bullets">
+              <li><strong>Infrastructure Design:</strong> Designed Azure resilience architectures and led cross-functional Disaster Recovery testing for critical business units.</li>
+              <li><strong>Compliance &amp; Risk Mapping:</strong> Delivered comprehensive risk mapping and GDPR compliance for Azure Data Lake projects.</li>
+              <li><strong>Third-Party Risk:</strong> Managed vendor security by reviewing 20+ Security Assurance Plans (SAPs) and challenging supplier security protocols.</li>
+              <li><strong>Crisis Management:</strong> Monitored 3 large-scale cyber crisis exercises involving both IT and Business stakeholders.</li>
+            </ul>
+          </div>
+
+          <hr class="exp-divider" />
+
+          <div class="exp-item">
+            <div class="exp-header">
+              <div>
+                <span class="exp-company">CRÉDIT AGRICOLE GROUP</span>
+                <span class="exp-role">IT Risk Engineer</span>
+              </div>
+              <span class="exp-date">2019 – 2020</span>
+            </div>
+            <div class="exp-subtitle">Tier-1 Global Investment &amp; Retail Bank · Rank #65 Forbes 2025 Global 2000</div>
+            <ul class="exp-bullets">
+              <li><strong>Security Governance:</strong> Managed the Security Project Desk, providing pre-analysis and guidance to align projects with group security standards.</li>
+              <li><strong>Cloud Compliance:</strong> Assisted cloud migration projects to ensure compliance with the MESARI risk framework.</li>
+            </ul>
+          </div>
+
+          <hr class="exp-divider" />
+
+          <div class="exp-item">
+            <div class="exp-header">
+              <div>
+                <span class="exp-company">BEETWEEN</span>
+                <span class="exp-role">IT Support &amp; Training Manager</span>
+              </div>
+              <span class="exp-date">2017 – 2019</span>
+            </div>
+            <ul class="exp-bullets">
+              <li><strong>SaaS Operations:</strong> Managed IT support and user training for SaaS solutions, coordinating with technical teams to improve platform reliability.</li>
+            </ul>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Education</div>
+          <div class="edu-grid">
+            <div class="edu-item">
+              <div>
+                <div class="edu-degree">Master's Degree in Digital Data Security</div>
+                <div class="edu-school">Devinci Executive Education, Paris</div>
+              </div>
+              <span class="edu-year">2020</span>
+            </div>
+            <div class="edu-item">
+              <div>
+                <div class="edu-degree">Engineering Degree (Master's Level)</div>
+                <div class="edu-school">ENSGTI, Pau, France</div>
+              </div>
+              <span class="edu-year">2017</span>
+            </div>
+            <div class="edu-item">
+              <div>
+                <div class="edu-degree">Master's Degree in Business Administration</div>
+                <div class="edu-school">IAE Pau, France</div>
+              </div>
+              <span class="edu-year">2017</span>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <div class="section-title">Certifications</div>
+          <div class="cert-grid">
+            <div class="cert-item">
+              <div class="cert-category">☁️ Cloud</div>
+              <ul class="cert-list">
+                <li>ISC² CCSP</li>
+                <li>Microsoft AZ-500</li>
+                <li>GCP Security Engineer</li>
+                <li>AZ-900 Azure Fundamentals</li>
+                <li>SC-900 MS Security &amp; Identity</li>
+              </ul>
+            </div>
+            <div class="cert-item">
+              <div class="cert-category">📋 Governance</div>
+              <ul class="cert-list">
+                <li>ISO 27001 Lead Implementer (PECB)</li>
+              </ul>
+            </div>
+            <div class="cert-item">
+              <div class="cert-category">🔧 Security Tools</div>
+              <ul class="cert-list">
+                <li>Netskope NCSA</li>
+                <li>Netskope NSCI</li>
+              </ul>
+            </div>
+            <div class="cert-item">
+              <div class="cert-category">🤖 AI</div>
+              <ul class="cert-list">
+                <li>AWS AI Practitioner</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <footer>
+          <p>Vincent Le Laverda · Cloud Security Engineer · vincentlelaverda@gmail.com</p>
+        </footer>
+
+      </div>
+    </main>
+  </div>
+
+  <script src="counter.js"></script>
+  <script>
+    const hamburger        = document.getElementById('hamburger');
+    const hamburgerSidebar = document.getElementById('hamburger-sidebar');
+    const sidebar          = document.getElementById('sidebar');
+    const overlay          = document.getElementById('overlay');
+    const mainEl           = document.querySelector('.main');
+
+    function toggleSidebar() {
+      const isOpen = sidebar.classList.toggle('open');
+      // External button hides when sidebar is open (it's inside the sidebar now)
+      hamburger.classList.toggle('hidden', isOpen);
+      if (window.innerWidth >= 769) {
+        mainEl.classList.toggle('shifted', isOpen);
+      } else {
+        overlay.classList.toggle('open', isOpen);
+      }
+    }
+
+    hamburger.addEventListener('click', toggleSidebar);
+    hamburgerSidebar.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 769) {
+        overlay.classList.remove('open');
+        mainEl.classList.toggle('shifted', sidebar.classList.contains('open'));
+      } else {
+        mainEl.classList.remove('shifted');
+        overlay.classList.toggle('open', sidebar.classList.contains('open'));
+      }
+    });
+  </script>
+</body>
+</html>

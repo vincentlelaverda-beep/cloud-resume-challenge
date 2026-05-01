@@ -1,0 +1,32 @@
+# ── Terraform secrets — NEVER commit these ────────────────────────────────────
+terraform/terraform.tfvars
+terraform/*.tfvars
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+
+# ── Scratch / notes files that may contain secrets ────────────────────────────
+# (catches any file whose name contains "export TF_VAR" or similar)
+export*.txt
+*token*.txt
+*secret*.txt
+*credentials*.txt
+
+# ── Deployment artifacts ──────────────────────────────────────────────────────
+api.zip
+
+# ── Python cache ──────────────────────────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Claude Code local config (dev-only tooling, not part of the project) ──────
+.claude/
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db

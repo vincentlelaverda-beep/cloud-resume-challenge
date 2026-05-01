@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How I Was Built — Vincent Le Laverda</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface2: #21262d;
+      --border: #30363d;
+      --accent: #00d4aa;
+      --accent2: #58a6ff;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --warning: #f0883e;
+      --sidebar-w: 220px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,212,170,.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,212,170,.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── Layout ─── */
+    .layout { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+    /* ─── Sidebar ─── */
+    .sidebar {
+      width: var(--sidebar-w);
+      flex-shrink: 0;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-brand { padding: 16px 20px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 12px; }
+    .sidebar-brand-text { flex: 1; min-width: 0; padding-top: 2px; }
+    .sidebar-brand-name { font-size: 0.95rem; font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+    .sidebar-brand-role { font-size: 0.72rem; color: var(--accent); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .sidebar-nav { flex: 1; padding: 16px 10px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-label { font-size: 0.65rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); padding: 8px 10px 6px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 8px; text-decoration: none; color: var(--muted); font-size: 0.88rem; font-weight: 500; transition: background 0.15s, color 0.15s; }
+    .nav-item:hover { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: rgba(0,212,170,.1); color: var(--accent); border: 1px solid rgba(0,212,170,.2); }
+    .nav-item .nav-icon { font-size: 1rem; flex-shrink: 0; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid var(--border); font-size: 0.72rem; color: var(--border); line-height: 1.6; }
+    .sidebar-footer a { color: var(--accent); text-decoration: none; }
+
+    /* ─── Toggle button — always visible ─── */
+    .hamburger-sidebar { display: flex; flex-direction: column; gap: 5px; background: transparent; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-shrink: 0; align-self: center; }
+    .hamburger-sidebar span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
+    .hamburger { display: flex; position: fixed; top: 14px; left: 14px; z-index: 200; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; cursor: pointer; flex-direction: column; gap: 5px; transition: opacity 0.2s; }
+    .hamburger span { display: block; width: 20px; height: 2px; background: var(--text); border-radius: 2px; }
+    .hamburger.hidden { opacity: 0; pointer-events: none; }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 99; }
+
+    /* ─── Main ─── */
+    .main { margin-left: 0; flex: 1; min-width: 0; transition: margin-left 0.25s ease; }
+    @media (min-width: 769px) { .main.shifted { margin-left: var(--sidebar-w); } }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 40px 32px 80px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 40px 36px;
+      margin-bottom: 24px;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    }
+    header h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff 40%, var(--accent));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+    header p {
+      color: var(--muted);
+      font-size: 0.95rem;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* ── Sections ── */
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px 32px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Architecture diagram ── */
+    .arch {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.82rem;
+      color: var(--accent);
+      line-height: 2;
+      overflow-x: auto;
+    }
+    .arch .dim  { color: var(--muted); }
+    .arch .blue { color: var(--accent2); }
+    .arch .org  { color: var(--warning); }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 16px; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 36px 1fr;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: rgba(0,212,170,.1);
+      border: 1px solid rgba(0,212,170,.3);
+      color: var(--accent);
+      font-size: 0.82rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .step-num.done {
+      background: rgba(0,212,170,.2);
+      border-color: var(--accent);
+    }
+    .step-num.pending {
+      background: rgba(88,166,255,.1);
+      border-color: rgba(88,166,255,.3);
+      color: var(--accent2);
+    }
+    .step-body h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .step-body p {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+    .step-body .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .tag {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ── Decisions ── */
+    .decision-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .decision {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .decision h3 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--warning);
+      margin-bottom: 6px;
+    }
+    .decision p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .decision p strong { color: var(--text); }
+
+    /* ── Stack ── */
+    .stack-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .stack-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stack-icon { font-size: 1.8rem; margin-bottom: 8px; }
+    .stack-name {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .stack-role { font-size: 0.78rem; color: var(--muted); }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      font-size: 0.78rem;
+      color: var(--border);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    @media (max-width: 768px) {
+      .overlay.open { display: block; }
+      .container { padding: 24px 16px 60px; padding-top: 64px; }
+      section { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <button class="hamburger" id="hamburger" aria-label="Toggle menu">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="overlay" id="overlay"></div>
+
+  <div class="layout">
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <button class="hamburger-sidebar" id="hamburger-sidebar" aria-label="Close menu">
+          <span></span><span></span><span></span>
+        </button>
+        <div class="sidebar-brand-text">
+          <div class="sidebar-brand-name">Vincent Le Laverda</div>
+          <div class="sidebar-brand-role">Cloud Security Engineer</div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-label">Pages</div>
+        <a href="index.html" class="nav-item">
+          <span class="nav-icon">📄</span> My CV
+        </a>
+        <a href="how-i-was-built.html" class="nav-item active">
+          <span class="nav-icon">🔧</span> How I Was Built
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        Built with <a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a> ⚡
+        <br>Cloud Resume Challenge
+      </div>
+    </aside>
+
+    <main class="main">
+  <div class="container">
+
+    <header>
+      <h1>How I Was Built</h1>
+      <p>This CV website is part of the <strong>Cloud Resume Challenge</strong> — a hands-on project
+      to learn cloud infrastructure, DevOps, and security by deploying a real website on Azure.</p>
+    </header>
+
+    <!-- Architecture -->
+    <section>
+      <div class="section-title">Architecture</div>
+      <div class="arch">
+        <span class="dim">Browser</span>
+          ──HTTPS──►
+        <span class="blue">Cloudflare</span>
+          <span class="dim">(CDN · SSL · DDoS)</span>
+          ──► <span class="org">Cloudflare Worker</span>
+          <span class="dim">(Host header rewrite)</span><br>
+        <span style="padding-left:180px"></span>│<br>
+        <span style="padding-left:180px"></span>▼<br>
+        <span style="padding-left:100px"></span>
+        <span class="blue">Azure Storage</span>
+          <span class="dim">Static Website ($web container)</span><br>
+        <br>
+        <span class="dim">Infrastructure managed by </span>
+        <span class="org">Terraform</span>
+        <span class="dim"> · Source code on </span>
+        <span class="org">GitHub</span>
+        <span class="dim"> · Deployed via </span>
+        <span class="org">GitHub Actions</span>
+        <span class="dim"> (coming soon)</span>
+      </div>
+    </section>
+
+    <!-- Tech stack -->
+    <section>
+      <div class="section-title">Tech Stack</div>
+      <div class="stack-grid">
+        <div class="stack-card">
+          <div class="stack-icon">☁️</div>
+          <div class="stack-name">Azure Storage</div>
+          <div class="stack-role">Static website hosting</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🔶</div>
+          <div class="stack-name">Cloudflare</div>
+          <div class="stack-role">CDN · HTTPS · DNS</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">⚙️</div>
+          <div class="stack-name">Terraform</div>
+          <div class="stack-role">Infrastructure as Code</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🐙</div>
+          <div class="stack-name">GitHub Actions</div>
+          <div class="stack-role">CI/CD (coming soon)</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🐍</div>
+          <div class="stack-name">Python</div>
+          <div class="stack-role">Visitor counter API</div>
+        </div>
+        <div class="stack-card">
+          <div class="stack-icon">🗄️</div>
+          <div class="stack-name">CosmosDB</div>
+          <div class="stack-role">Visitor count storage</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Challenge steps -->
+    <section>
+      <div class="section-title">Challenge Progress</div>
+      <div class="steps">
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>1 · Certification</h3>
+            <p>AZ-900 Azure Fundamentals — already on the CV.</p>
+            <div class="tags"><span class="tag">AZ-900</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>2 · HTML &amp; 3 · CSS</h3>
+            <p>CV written in semantic HTML with a dark cybersecurity-themed CSS design. Built with Claude Code.</p>
+            <div class="tags"><span class="tag">HTML5</span><span class="tag">CSS3</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>4 · Static Website</h3>
+            <p>Deployed on Azure Blob Storage with static website hosting enabled. Infrastructure defined in Terraform with security hardening: double encryption at rest, TLS 1.2 minimum, soft delete, cross-tenant replication disabled.</p>
+            <div class="tags"><span class="tag">Azure Storage</span><span class="tag">Terraform</span><span class="tag">LRS</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num done">✓</div>
+          <div class="step-body">
+            <h3>5 · HTTPS &amp; 6 · DNS</h3>
+            <p>Cloudflare Free replaces deprecated Azure CDN classic. A Cloudflare Worker rewrites the Host header to fix Azure Storage's InvalidUri rejection. Universal SSL provides free HTTPS, no certificate purchase needed.</p>
+            <div class="tags"><span class="tag">Cloudflare</span><span class="tag">Workers</span><span class="tag">DNS</span><span class="tag">SSL</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num pending">7</div>
+          <div class="step-body">
+            <h3>7 · Visitor Counter (JavaScript)</h3>
+            <p>A JavaScript counter that calls an Azure Function API to display how many people visited this site.</p>
+            <div class="tags"><span class="tag">JavaScript</span><span class="tag">Fetch API</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num pending">8</div>
+          <div class="step-body">
+            <h3>8 · Database</h3>
+            <p>Azure CosmosDB (free tier) stores the visitor count using the Table API in serverless capacity mode.</p>
+            <div class="tags"><span class="tag">CosmosDB</span><span class="tag">Serverless</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num pending">9</div>
+          <div class="step-body">
+            <h3>9 · API &amp; 10 · Python</h3>
+            <p>Azure Function with HTTP trigger, written in Python, reads and updates the CosmosDB counter.</p>
+            <div class="tags"><span class="tag">Azure Functions</span><span class="tag">Python</span></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-num pending">11</div>
+          <div class="step-body">
+            <h3>11–15 · Tests, IaC &amp; CI/CD</h3>
+            <p>Python tests for the Azure Function. Full infrastructure as code with Terraform. GitHub Actions pipelines for automatic deployment on push.</p>
+            <div class="tags"><span class="tag">pytest</span><span class="tag">GitHub Actions</span><span class="tag">Terraform</span></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Key decisions -->
+    <section>
+      <div class="section-title">Key Engineering Decisions</div>
+      <div class="decision-grid">
+
+        <div class="decision">
+          <h3>⚠️ Azure CDN Classic was retired</h3>
+          <p>The Cloud Resume Challenge originally specified Azure CDN. In 2025, Microsoft retired Azure CDN classic and no longer accepts new profile creation. The official replacement (Azure Front Door) costs ~$35/month. We chose <strong>Cloudflare Free</strong> as a cost-effective alternative providing the same CDN, HTTPS, and DNS capabilities.</p>
+        </div>
+
+        <div class="decision">
+          <h3>⚠️ Host Header mismatch with Cloudflare + Azure Storage</h3>
+          <p>Cloudflare's proxy sends the custom domain (<code>vincentlelaverda.com</code>) as the HTTP Host header to Azure Storage. Azure Storage static website only accepts its own hostname and returns <strong>InvalidUri 400</strong>. A <strong>Cloudflare Worker</strong> intercepts each request and rewrites the Host header to the correct Azure Storage endpoint before forwarding.</p>
+        </div>
+
+        <div class="decision">
+          <h3>✅ Terraform over ARM templates</h3>
+          <p>The challenge suggests ARM templates for IaC. We used <strong>Terraform</strong> instead — it is cloud-agnostic, more readable, and manages both Azure and Cloudflare resources in the same codebase with a unified state file.</p>
+        </div>
+
+      </div>
+    </section>
+
+    <footer>
+      <p>Built with <a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a> ⚡ · Part of the <a href="https://cloudresumechallenge.dev" target="_blank" rel="noopener">Cloud Resume Challenge</a></p>
+    </footer>
+
+  </div>
+  </main>
+  </div>
+
+  <script>
+    const hamburger        = document.getElementById('hamburger');
+    const hamburgerSidebar = document.getElementById('hamburger-sidebar');
+    const sidebar          = document.getElementById('sidebar');
+    const overlay          = document.getElementById('overlay');
+    const mainEl           = document.querySelector('.main');
+
+    function toggleSidebar() {
+      const isOpen = sidebar.classList.toggle('open');
+      hamburger.classList.toggle('hidden', isOpen);
+      if (window.innerWidth >= 769) {
+        mainEl.classList.toggle('shifted', isOpen);
+      } else {
+        overlay.classList.toggle('open', isOpen);
+      }
+    }
+
+    hamburger.addEventListener('click', toggleSidebar);
+    hamburgerSidebar.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    window.addEventListener('resize', () => {
+      if (window.innerWidth >= 769) {
+        overlay.classList.remove('open');
+        mainEl.classList.toggle('shifted', sidebar.classList.contains('open'));
+      } else {
+        mainEl.classList.remove('shifted');
+        overlay.classList.toggle('open', sidebar.classList.contains('open'));
+      }
+    });
+  </script>
+</body>
+</html>
